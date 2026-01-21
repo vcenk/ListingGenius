@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ListingGenius</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <div class="logo">
+        <span class="logo-icon">&#128640;</span>
+        <span class="logo-text">ListingGenius</span>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Product Input Section -->
+      <section class="input-section" id="inputSection">
+        <div class="input-group">
+          <input
+            type="text"
+            id="productIdea"
+            class="product-input"
+            placeholder="Enter product idea..."
+          >
+        </div>
+
+        <div class="platform-select">
+          <label>Platform:</label>
+          <div class="platform-buttons">
+            <button class="platform-btn active" data-platform="etsy">Etsy</button>
+            <button class="platform-btn" data-platform="amazon">Amazon</button>
+          </div>
+        </div>
+
+        <button class="primary-btn" id="validateBtn">
+          <span class="btn-icon">&#128269;</span>
+          Validate Demand
+        </button>
+      </section>
+
+      <!-- Demand Results Section (hidden by default) -->
+      <section class="results-section hidden" id="resultsSection">
+        <div class="results-header">
+          <span class="results-icon">&#128202;</span>
+          <span>Demand Analysis</span>
+          <button class="close-btn" id="closeResults">&times;</button>
+        </div>
+
+        <div class="product-name" id="analyzedProduct"></div>
+
+        <div class="score-grid">
+          <div class="score-item">
+            <span class="score-label">Demand Score</span>
+            <div class="score-bar">
+              <div class="score-fill" id="demandScoreFill"></div>
+            </div>
+            <span class="score-value" id="demandScoreValue">-/10</span>
+          </div>
+
+          <div class="score-item">
+            <span class="score-label">AI Visibility</span>
+            <div class="score-bar">
+              <div class="score-fill" id="aiScoreFill"></div>
+            </div>
+            <span class="score-value" id="aiScoreValue">-/10</span>
+          </div>
+
+          <div class="score-item">
+            <span class="score-label">Competition</span>
+            <div class="competition-badge" id="competitionBadge">-</div>
+          </div>
+        </div>
+
+        <div class="stats-row">
+          <div class="stat">
+            <span class="stat-icon">&#128200;</span>
+            <span>Trend: <strong id="trendDirection">-</strong></span>
+          </div>
+          <div class="stat">
+            <span class="stat-icon">&#128269;</span>
+            <span>Searches: <strong id="monthlySearches">-</strong></span>
+          </div>
+        </div>
+
+        <div class="verdict-box" id="verdictBox">
+          <span class="verdict-icon" id="verdictIcon">&#9989;</span>
+          <span class="verdict-text" id="verdictText">Analyzing...</span>
+        </div>
+
+        <div class="suggestions-section">
+          <div class="suggestions-header">
+            <span class="suggestions-icon">&#128161;</span>
+            <span>Suggestions:</span>
+          </div>
+          <ul class="suggestions-list" id="suggestionsList"></ul>
+        </div>
+
+        <div class="results-actions">
+          <button class="secondary-btn" id="generateFromResults">Generate Listing</button>
+          <button class="outline-btn" id="newSearch">New Search</button>
+        </div>
+      </section>
+
+      <!-- Quick Actions -->
+      <section class="quick-actions" id="quickActions">
+        <h3>Quick Actions</h3>
+        <div class="actions-grid">
+          <button class="action-btn" id="getKeywordsBtn">
+            <span class="action-icon">&#128273;</span>
+            <span>Get Keywords</span>
+          </button>
+          <button class="action-btn" id="generateListingBtn">
+            <span class="action-icon">&#10024;</span>
+            <span>Generate Listing</span>
+          </button>
+          <button class="action-btn" id="spyListingBtn">
+            <span class="action-icon">&#128373;</span>
+            <span>Spy Listing</span>
+          </button>
+          <button class="action-btn" id="analyzePageBtn">
+            <span class="action-icon">&#128202;</span>
+            <span>Analyze Page</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- Generation Section (hidden by default) -->
+      <section class="generation-section hidden" id="generationSection">
+        <div class="section-header">
+          <span>&#10024;</span>
+          <span>Generate Listing</span>
+          <button class="close-btn" id="closeGeneration">&times;</button>
+        </div>
+
+        <div class="form-group">
+          <label for="genProductDesc">Product Description</label>
+          <textarea id="genProductDesc" rows="3" placeholder="Describe your product..."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="genKeywords">Target Keywords (comma separated)</label>
+          <input type="text" id="genKeywords" placeholder="keyword1, keyword2, keyword3">
+        </div>
+
+        <div class="form-group">
+          <label for="genTone">Tone</label>
+          <select id="genTone">
+            <option value="professional">Professional</option>
+            <option value="casual">Casual</option>
+            <option value="luxury">Luxury</option>
+            <option value="playful">Playful</option>
+          </select>
+        </div>
+
+        <button class="primary-btn" id="generateBtn">
+          <span class="btn-icon">&#10024;</span>
+          Generate Content
+        </button>
+
+        <!-- Generated Content Display -->
+        <div class="generated-content hidden" id="generatedContent">
+          <div class="content-block">
+            <div class="content-header">
+              <span>Title</span>
+              <button class="copy-btn" data-target="generatedTitle">Copy</button>
+            </div>
+            <div class="content-text" id="generatedTitle"></div>
+          </div>
+
+          <div class="content-block">
+            <div class="content-header">
+              <span>Description</span>
+              <button class="copy-btn" data-target="generatedDesc">Copy</button>
+            </div>
+            <div class="content-text" id="generatedDesc"></div>
+          </div>
+
+          <div class="content-block">
+            <div class="content-header">
+              <span>Tags</span>
+              <button class="copy-btn" data-target="generatedTags">Copy All</button>
+            </div>
+            <div class="tags-container" id="generatedTags"></div>
+          </div>
+
+          <button class="primary-btn" id="autoFillBtn">
+            <span class="btn-icon">&#128221;</span>
+            Auto-Fill Form
+          </button>
+        </div>
+      </section>
+
+      <!-- Loading Overlay -->
+      <div class="loading-overlay hidden" id="loadingOverlay">
+        <div class="spinner"></div>
+        <span class="loading-text" id="loadingText">Analyzing...</span>
+      </div>
+
+      <!-- Error Message -->
+      <div class="error-message hidden" id="errorMessage">
+        <span class="error-icon">&#9888;</span>
+        <span class="error-text" id="errorText"></span>
+        <button class="error-close" id="closeError">&times;</button>
+      </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <div class="credits">
+        <span>Credits: <strong id="creditsUsed">0</strong>/<strong id="creditsLimit">50</strong></span>
+      </div>
+      <button class="settings-btn" id="settingsBtn">
+        <span>&#9881;</span>
+        <span>Settings</span>
+      </button>
+    </footer>
+  </div>
+
+  <script src="popup.js" type="module"></script>
+</body>
+</html>

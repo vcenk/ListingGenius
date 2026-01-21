@@ -1,0 +1,56 @@
+{
+  "manifest_version": 3,
+  "name": "ListingGenius",
+  "version": "1.0.0",
+  "description": "AI-powered e-commerce listing optimizer for Etsy and Amazon sellers",
+  "permissions": [
+    "activeTab",
+    "storage",
+    "sidePanel"
+  ],
+  "host_permissions": [
+    "https://www.etsy.com/*",
+    "https://www.amazon.com/*",
+    "https://www.amazon.co.uk/*",
+    "https://www.amazon.ca/*",
+    "https://api.openai.com/*",
+    "https://api.keywordseverywhere.com/*"
+  ],
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16": "assets/icons/icon16.png",
+      "48": "assets/icons/icon48.png",
+      "128": "assets/icons/icon128.png"
+    }
+  },
+  "background": {
+    "service_worker": "background/service-worker.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://www.etsy.com/*"],
+      "js": ["content/common.js", "content/etsy.js"],
+      "css": ["content/content.css"]
+    },
+    {
+      "matches": [
+        "https://www.amazon.com/*",
+        "https://www.amazon.co.uk/*",
+        "https://www.amazon.ca/*"
+      ],
+      "js": ["content/common.js", "content/amazon.js"],
+      "css": ["content/content.css"]
+    }
+  ],
+  "side_panel": {
+    "default_path": "sidepanel/sidepanel.html"
+  },
+  "options_page": "options/options.html",
+  "icons": {
+    "16": "assets/icons/icon16.png",
+    "48": "assets/icons/icon48.png",
+    "128": "assets/icons/icon128.png"
+  }
+}
