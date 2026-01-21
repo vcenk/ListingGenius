@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ListingGenius - Image Studio</title>
+  <link rel="stylesheet" href="image-studio.css">
+</head>
+<body>
+  <div class="studio-container">
+    <!-- Header -->
+    <header class="studio-header">
+      <div class="header-left">
+        <span class="header-icon">&#127912;</span>
+        <h1>Image Studio</h1>
+      </div>
+      <div class="header-right">
+        <div class="platform-toggle">
+          <button class="platform-btn active" data-platform="amazon">Amazon</button>
+          <button class="platform-btn" data-platform="etsy">Etsy</button>
+        </div>
+        <button class="close-btn" id="closeStudio">&times;</button>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="studio-main">
+      <!-- Left Panel: Image Workspace -->
+      <section class="workspace-panel">
+        <!-- Empty State -->
+        <div class="empty-state" id="emptyState">
+          <div class="empty-icon">&#128247;</div>
+          <h2>Add Images to Start</h2>
+          <p>Capture images from the page or upload your own</p>
+          <div class="empty-actions">
+            <button class="btn btn-primary" id="captureFromPageBtn">
+              <span>&#128248;</span> Capture from Page
+            </button>
+            <button class="btn btn-secondary" id="uploadImagesBtn">
+              <span>&#128194;</span> Upload Images
+            </button>
+          </div>
+          <input type="file" id="fileInput" accept="image/*" multiple class="hidden">
+        </div>
+
+        <!-- Image Grid -->
+        <div class="image-workspace hidden" id="imageWorkspace">
+          <div class="workspace-toolbar">
+            <span class="selected-count" id="selectedCount">0 selected</span>
+            <div class="toolbar-actions">
+              <button class="toolbar-btn" id="addMoreBtn" title="Add more images">
+                <span>&#10133;</span>
+              </button>
+              <button class="toolbar-btn" id="selectAllBtn" title="Select all">
+                <span>&#9745;</span>
+              </button>
+              <button class="toolbar-btn danger" id="deleteSelectedBtn" title="Delete selected">
+                <span>&#128465;</span>
+              </button>
+            </div>
+          </div>
+          <div class="image-grid" id="imageGrid"></div>
+        </div>
+
+        <!-- Image Capture Modal -->
+        <div class="capture-modal hidden" id="captureModal">
+          <div class="modal-header">
+            <h3>Select Images from Page</h3>
+            <button class="close-btn" id="closeCaptureModal">&times;</button>
+          </div>
+          <div class="capture-grid" id="captureGrid"></div>
+          <div class="modal-footer">
+            <span class="capture-count" id="captureCount">0 selected</span>
+            <button class="btn btn-secondary" id="cancelCaptureBtn">Cancel</button>
+            <button class="btn btn-primary" id="confirmCaptureBtn">Add Selected</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Right Panel: Tools & Options -->
+      <aside class="tools-panel">
+        <!-- Generation Tools -->
+        <div class="tools-section">
+          <h3 class="section-title">Generation Tools</h3>
+
+          <div class="tool-card" id="whiteBackgroundTool">
+            <div class="tool-icon">&#11036;</div>
+            <div class="tool-info">
+              <h4>White Background</h4>
+              <p>Amazon main image ready</p>
+            </div>
+            <span class="tool-credits">1 credit</span>
+          </div>
+
+          <div class="tool-card" id="lifestyleTool">
+            <div class="tool-icon">&#127968;</div>
+            <div class="tool-info">
+              <h4>Lifestyle Scene</h4>
+              <p>Place product in context</p>
+            </div>
+            <span class="tool-credits">2 credits</span>
+          </div>
+
+          <div class="tool-card" id="enhanceTool">
+            <div class="tool-icon">&#10024;</div>
+            <div class="tool-info">
+              <h4>Enhance & Upscale</h4>
+              <p>4x resolution boost</p>
+            </div>
+            <span class="tool-credits">1 credit</span>
+          </div>
+
+          <div class="tool-card" id="variationsTool">
+            <div class="tool-icon">&#128257;</div>
+            <div class="tool-info">
+              <h4>Generate Variations</h4>
+              <p>A/B testing images</p>
+            </div>
+            <span class="tool-credits">3 credits</span>
+          </div>
+
+          <div class="tool-card" id="removeBackgroundTool">
+            <div class="tool-icon">&#9986;</div>
+            <div class="tool-info">
+              <h4>Remove Background</h4>
+              <p>Transparent PNG</p>
+            </div>
+            <span class="tool-credits">1 credit</span>
+          </div>
+        </div>
+
+        <!-- Lifestyle Scene Options (Hidden by default) -->
+        <div class="tools-section hidden" id="lifestyleOptions">
+          <h3 class="section-title">
+            <button class="back-btn" id="backFromLifestyle">&larr;</button>
+            Lifestyle Scene
+          </h3>
+
+          <div class="scene-presets">
+            <h4>Scene Presets</h4>
+            <div class="preset-grid" id="presetGrid">
+              <button class="preset-btn" data-scene="kitchen">&#127869; Kitchen</button>
+              <button class="preset-btn" data-scene="living_room">&#128715; Living Room</button>
+              <button class="preset-btn" data-scene="bedroom">&#128716; Bedroom</button>
+              <button class="preset-btn" data-scene="office">&#128188; Office</button>
+              <button class="preset-btn" data-scene="outdoor">&#127795; Outdoor</button>
+              <button class="preset-btn" data-scene="studio">&#127775; Studio</button>
+            </div>
+          </div>
+
+          <div class="custom-scene">
+            <h4>Or Describe Your Scene</h4>
+            <textarea id="customScenePrompt" placeholder="Modern minimalist kitchen with marble countertop, morning sunlight..."></textarea>
+          </div>
+
+          <div class="style-select">
+            <h4>Style</h4>
+            <select id="lifestyleStyle">
+              <option value="photorealistic">Photorealistic</option>
+              <option value="artistic">Artistic</option>
+              <option value="minimal">Minimal</option>
+              <option value="cozy">Cozy</option>
+              <option value="luxury">Luxury</option>
+            </select>
+          </div>
+
+          <button class="btn btn-primary btn-full" id="generateLifestyleBtn">
+            Generate Lifestyle Image
+          </button>
+        </div>
+
+        <!-- Credits Display -->
+        <div class="credits-section">
+          <div class="credits-info">
+            <span class="credits-label">Image Credits</span>
+            <span class="credits-value"><span id="creditsUsed">0</span>/<span id="creditsLimit">20</span></span>
+          </div>
+          <div class="credits-bar">
+            <div class="credits-fill" id="creditsFill" style="width: 0%"></div>
+          </div>
+        </div>
+      </aside>
+    </main>
+
+    <!-- Results Panel (Hidden by default) -->
+    <section class="results-panel hidden" id="resultsPanel">
+      <div class="results-header">
+        <h3>Generated Images</h3>
+        <button class="close-btn" id="closeResults">&times;</button>
+      </div>
+      <div class="results-grid" id="resultsGrid"></div>
+      <div class="results-actions">
+        <button class="btn btn-secondary" id="downloadAllBtn">
+          <span>&#128229;</span> Download All
+        </button>
+        <button class="btn btn-secondary" id="downloadZipBtn">
+          <span>&#128230;</span> Download ZIP
+        </button>
+        <button class="btn btn-primary" id="useInListingBtn">
+          <span>&#128221;</span> Use in Listing
+        </button>
+      </div>
+    </section>
+
+    <!-- Processing Overlay -->
+    <div class="processing-overlay hidden" id="processingOverlay">
+      <div class="processing-content">
+        <div class="spinner"></div>
+        <h3 id="processingTitle">Processing...</h3>
+        <p id="processingStatus">Removing background...</p>
+        <div class="progress-bar">
+          <div class="progress-fill" id="processingProgress"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Error Toast -->
+    <div class="toast hidden" id="errorToast">
+      <span class="toast-icon">&#9888;</span>
+      <span class="toast-message" id="toastMessage"></span>
+      <button class="toast-close" id="closeToast">&times;</button>
+    </div>
+  </div>
+
+  <script src="image-studio.js" type="module"></script>
+</body>
+</html>

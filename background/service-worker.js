@@ -1,8 +1,9 @@
 // ListingGenius Background Service Worker
 
 import { callOpenAI, analyzeImage } from '../utils/api.js';
-import { getSettings, saveToCache, getFromCache } from '../utils/storage.js';
+import { getSettings, saveToCache, getFromCache, useImageCredit, hasImageCredits } from '../utils/storage.js';
 import { extractKeywords, getKeywordData } from '../utils/keywords.js';
+import { processImage, createWhiteBackground, generateLifestyleImage, upscaleImage, removeBackground, generateVariations } from '../utils/fal-api.js';
 
 // Message handlers
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -35,6 +36,15 @@ async function handleMessage(message, sender) {
 
     case 'analyzeProductImage':
       return await analyzeProductImage(data);
+
+    case 'processImage':
+      return await handleProcessImage(data);
+
+    case 'openImageStudio':
+      return await openImageStudio(data);
+
+    case 'getImageCredits':
+      return await getImageCreditsInfo();
 
     default:
       throw new Error(`Unknown action: ${action}`);
@@ -400,4 +410,98 @@ function getNextResetDate() {
   const now = new Date();
   const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
   return nextMonth.toISOString().split('T')[0];
+}
+
+// Image Processing Handlers
+async function handleProcessImage({ imageUrl, operation, options = {} }) {
+  const settings = await getSettings();
+
+  if (!settings.falApiKey) {
+    throw new Error('Please configure your fal.ai API key in settings');
+  }
+
+  // Check credits
+  const hasCredits = await hasImageCredits();
+  if (!hasCredits) {
+    throw new Error('No image credits remaining. Credits reset at the beginning of each month.');
+  }
+
+  let result;
+
+  switch (operation) {
+    case 'white_background':
+      result = await createWhiteBackground(imageUrl, settings.falApiKey, options);
+      break;
+
+    case 'remove_background':
+      result = await removeBackground(imageUrl, settings.falApiKey);
+      break;
+
+    case 'lifestyle':
+      result = await generateLifestyleImage(imageUrl, options.prompt, settings.falApiKey, options);
+      break;
+
+    case 'upscale':
+      result = await upscaleImage(imageUrl, settings.falApiKey, options);
+      break;
+
+    case 'variations':
+      result = await generateVariations(imageUrl, settings.falApiKey, options);
+      break;
+
+    case 'full_process':
+      result = await processImage(imageUrl, settings.falApiKey, options);
+      break;
+
+    default:
+      throw new Error(`Unknown image operation: ${operation}`);
+  }
+
+  // Use a credit
+  await useImageCredit(operation);
+
+  return { data: result };
+}
+
+async function openImageStudio({ tabId }) {
+  // Open the image studio page
+  const studioUrl = chrome.runtime.getURL('image-studio/image-studio.html');
+
+  if (tabId) {
+    // Store the source tab ID for later image capture
+    await chrome.storage.session.set({ imageStudioSourceTab: tabId });
+  }
+
+  // Open in a new tab
+  await chrome.tabs.create({ url: studioUrl });
+
+  return { success: true };
+}
+
+async function getImageCreditsInfo() {
+  const data = await chrome.storage.local.get('imageCredits');
+  const credits = data.imageCredits || {
+    used: 0,
+    limit: 20,
+    resetDate: getNextResetDate(),
+    history: []
+  };
+
+  // Check if we need to reset
+  const today = new Date().toISOString().split('T')[0];
+  if (credits.resetDate && today >= credits.resetDate) {
+    credits.used = 0;
+    credits.history = [];
+    credits.resetDate = getNextResetDate();
+    await chrome.storage.local.set({ imageCredits: credits });
+  }
+
+  return {
+    data: {
+      used: credits.used,
+      limit: credits.limit,
+      remaining: credits.limit - credits.used,
+      resetDate: credits.resetDate
+    }
+  };
 }

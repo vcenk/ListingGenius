@@ -27,6 +27,60 @@ const ETSY_SELECTORS = {
 };
 
 /**
+ * Capture Etsy product images
+ */
+ListingGenius.captureEtsyImages = function() {
+  const images = [];
+  const seenUrls = new Set();
+
+  // Etsy image selectors (prioritized)
+  const selectors = [
+    // Main product carousel images
+    '[data-carousel-paging-controls] img',
+    '.wt-max-width-full img[src*="etsystatic"]',
+    '.carousel-image img',
+    '[data-image-carousel] img',
+    // Listing gallery images
+    '.listing-page-image-carousel img',
+    '.listing-image img',
+    // High-res data attributes
+    'img[data-src-zoom]',
+    'img[data-src*="il_fullxfull"]',
+    // General Etsy static images
+    'img[src*="il_"]'
+  ];
+
+  selectors.forEach(selector => {
+    const elements = document.querySelectorAll(selector);
+    elements.forEach(img => {
+      // Get high-res URL
+      let src = img.getAttribute('data-src-zoom') ||
+                img.getAttribute('data-src-delay') ||
+                img.getAttribute('data-src') ||
+                img.src;
+
+      // Try to get the fullxfull version (highest res on Etsy)
+      if (src && src.includes('il_')) {
+        src = src.replace(/il_\d+x\d+/, 'il_fullxfull');
+      }
+
+      if (src && !seenUrls.has(src) && src.includes('etsystatic')) {
+        seenUrls.add(src);
+        images.push({
+          src: src,
+          thumbnail: img.src,
+          alt: img.alt || '',
+          width: img.naturalWidth || 1000,
+          height: img.naturalHeight || 1000
+        });
+      }
+    });
+  });
+
+  return images.slice(0, 10);
+};
+
+/**
  * Override extractPageData for Etsy
  */
 ListingGenius.extractPageData = function() {

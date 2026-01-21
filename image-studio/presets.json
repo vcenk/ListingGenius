@@ -1,0 +1,186 @@
+{
+  "lifestyle_scenes": {
+    "home_decor": [
+      {
+        "id": "cozy_living",
+        "name": "Cozy Living Room",
+        "prompt": "product placed on a stylish coffee table in a warm, cozy living room with soft natural lighting, modern minimalist decor, beige and cream tones, lifestyle photography",
+        "categories": ["home", "decor", "gifts"]
+      },
+      {
+        "id": "kitchen_counter",
+        "name": "Kitchen Counter",
+        "prompt": "product displayed on a clean marble kitchen counter with morning sunlight, fresh herbs nearby, modern kitchen backdrop, lifestyle product photography",
+        "categories": ["kitchen", "home", "food"]
+      },
+      {
+        "id": "bedroom_nightstand",
+        "name": "Bedroom Nightstand",
+        "prompt": "product on a wooden nightstand in a serene bedroom setting, soft morning light, white linens, peaceful atmosphere, lifestyle photography",
+        "categories": ["bedroom", "wellness", "gifts"]
+      }
+    ],
+    "workspace": [
+      {
+        "id": "modern_desk",
+        "name": "Modern Desk",
+        "prompt": "product on a clean modern desk workspace with laptop and notebook, natural lighting, minimalist office setup, professional lifestyle photography",
+        "categories": ["office", "stationery", "tech"]
+      },
+      {
+        "id": "creative_studio",
+        "name": "Creative Studio",
+        "prompt": "product in a bright creative studio space with art supplies, large windows, artistic atmosphere, inspiring workspace, lifestyle photography",
+        "categories": ["art", "craft", "creative"]
+      }
+    ],
+    "outdoor": [
+      {
+        "id": "garden_table",
+        "name": "Garden Table",
+        "prompt": "product on a rustic wooden table in a beautiful garden setting, natural greenery, soft sunlight, outdoor lifestyle photography",
+        "categories": ["outdoor", "garden", "nature"]
+      },
+      {
+        "id": "beach_scene",
+        "name": "Beach Setting",
+        "prompt": "product displayed on natural driftwood or sand with ocean waves in soft focus background, golden hour lighting, coastal lifestyle photography",
+        "categories": ["beach", "summer", "travel"]
+      },
+      {
+        "id": "picnic_setting",
+        "name": "Picnic Scene",
+        "prompt": "product on a stylish picnic blanket in a sunny park, wicker basket, flowers, warm summer day atmosphere, lifestyle photography",
+        "categories": ["outdoor", "summer", "food"]
+      }
+    ],
+    "seasonal": [
+      {
+        "id": "holiday_festive",
+        "name": "Holiday Festive",
+        "prompt": "product in a festive holiday setting with twinkling lights, pine branches, warm candles, cozy winter atmosphere, holiday lifestyle photography",
+        "categories": ["holiday", "gifts", "winter"]
+      },
+      {
+        "id": "spring_flowers",
+        "name": "Spring Blooms",
+        "prompt": "product surrounded by fresh spring flowers, pastel colors, bright natural light, fresh and airy spring atmosphere, lifestyle photography",
+        "categories": ["spring", "gifts", "flowers"]
+      },
+      {
+        "id": "autumn_cozy",
+        "name": "Autumn Cozy",
+        "prompt": "product in an autumn setting with fall leaves, pumpkins, warm blanket, cozy autumn atmosphere with warm tones, lifestyle photography",
+        "categories": ["autumn", "fall", "cozy"]
+      }
+    ],
+    "fashion": [
+      {
+        "id": "flat_lay",
+        "name": "Fashion Flat Lay",
+        "prompt": "product in a stylish flat lay arrangement with fashion accessories, sunglasses, watch, on marble surface, editorial fashion photography",
+        "categories": ["fashion", "accessories", "jewelry"]
+      },
+      {
+        "id": "vanity_setup",
+        "name": "Vanity Setup",
+        "prompt": "product on an elegant vanity table with mirror, flowers, perfume bottles, soft lighting, luxury beauty photography",
+        "categories": ["beauty", "jewelry", "accessories"]
+      }
+    ],
+    "food_drink": [
+      {
+        "id": "breakfast_table",
+        "name": "Breakfast Table",
+        "prompt": "product on a beautiful breakfast table setting, fresh pastries, coffee, fruits, morning light, food lifestyle photography",
+        "categories": ["food", "kitchen", "morning"]
+      },
+      {
+        "id": "cafe_scene",
+        "name": "Cafe Atmosphere",
+        "prompt": "product in a charming cafe setting, coffee cup, book, warm ambient lighting, cozy cafe atmosphere, lifestyle photography",
+        "categories": ["food", "lifestyle", "cozy"]
+      }
+    ],
+    "kids_baby": [
+      {
+        "id": "nursery",
+        "name": "Nursery Setting",
+        "prompt": "product in a soft, pastel nursery room with plush toys, gentle lighting, safe and cozy baby room atmosphere, lifestyle photography",
+        "categories": ["baby", "kids", "nursery"]
+      },
+      {
+        "id": "playroom",
+        "name": "Playroom Scene",
+        "prompt": "product in a colorful, fun playroom with toys and books, bright cheerful atmosphere, child-friendly setting, lifestyle photography",
+        "categories": ["kids", "toys", "play"]
+      }
+    ],
+    "craft_handmade": [
+      {
+        "id": "craft_table",
+        "name": "Craft Table",
+        "prompt": "product on a wooden craft table with crafting supplies, scissors, ribbons, natural materials, handmade artisan atmosphere, lifestyle photography",
+        "categories": ["craft", "handmade", "art"]
+      },
+      {
+        "id": "yarn_setup",
+        "name": "Yarn & Textile",
+        "prompt": "product displayed with yarn balls, knitting needles, soft textiles, cozy crafting atmosphere, warm tones, lifestyle photography",
+        "categories": ["yarn", "knitting", "textile"]
+      }
+    ]
+  },
+  "marketplace_templates": {
+    "etsy": {
+      "main_image": {
+        "description": "Clean, bright product photo with minimal styling",
+        "prompt_suffix": ", bright natural lighting, clean background, sharp focus on product details, Etsy marketplace style photography"
+      },
+      "lifestyle": {
+        "description": "Product in use or styled setting",
+        "prompt_suffix": ", styled product photography for Etsy, showing scale and use case, aspirational lifestyle setting"
+      },
+      "detail": {
+        "description": "Close-up showing craftsmanship",
+        "prompt_suffix": ", macro detail shot, showing texture and craftsmanship, high quality product details"
+      }
+    },
+    "amazon": {
+      "main_image": {
+        "description": "Pure white background, product centered",
+        "prompt_suffix": ", pure white background RGB(255,255,255), product centered and filling 85% of frame, Amazon marketplace compliant"
+      },
+      "lifestyle": {
+        "description": "Product in realistic use scenario",
+        "prompt_suffix": ", realistic lifestyle setting showing product in use, Amazon A+ content style photography"
+      },
+      "infographic": {
+        "description": "Product with highlighted features",
+        "prompt_suffix": ", clean product shot suitable for infographic overlay, even lighting, Amazon listing style"
+      }
+    }
+  },
+  "style_modifiers": {
+    "lighting": [
+      { "id": "natural", "name": "Natural Light", "modifier": "soft natural daylight" },
+      { "id": "studio", "name": "Studio Light", "modifier": "professional studio lighting" },
+      { "id": "golden_hour", "name": "Golden Hour", "modifier": "warm golden hour sunlight" },
+      { "id": "dramatic", "name": "Dramatic", "modifier": "dramatic moody lighting" }
+    ],
+    "mood": [
+      { "id": "minimal", "name": "Minimalist", "modifier": "minimalist clean aesthetic" },
+      { "id": "cozy", "name": "Cozy & Warm", "modifier": "warm cozy atmosphere" },
+      { "id": "luxury", "name": "Luxury", "modifier": "elegant luxury premium feel" },
+      { "id": "playful", "name": "Playful", "modifier": "fun colorful playful vibe" },
+      { "id": "rustic", "name": "Rustic", "modifier": "rustic organic natural style" }
+    ],
+    "color_palette": [
+      { "id": "neutral", "name": "Neutral", "modifier": "neutral beige cream white tones" },
+      { "id": "pastel", "name": "Pastel", "modifier": "soft pastel color palette" },
+      { "id": "bold", "name": "Bold Colors", "modifier": "vibrant bold colors" },
+      { "id": "earth", "name": "Earth Tones", "modifier": "warm earth tones, terracotta, olive" },
+      { "id": "monochrome", "name": "Monochrome", "modifier": "monochromatic color scheme" }
+    ]
+  }
+}

@@ -212,6 +212,117 @@ ListingGenius.waitForElement = function(selector, timeout = 5000) {
 };
 
 /**
+ * Capture product images from page
+ */
+ListingGenius.captureProductImages = function() {
+  const platform = ListingGenius.detectPlatform();
+  let images = [];
+
+  // Generic image selectors for product images
+  const genericSelectors = [
+    'img[src*="product"]',
+    'img[src*="listing"]',
+    'img[data-src]',
+    '[class*="product"] img',
+    '[class*="gallery"] img',
+    '[class*="image"] img'
+  ];
+
+  // Platform-specific selectors will be added by etsy.js and amazon.js
+  if (platform === 'etsy') {
+    images = ListingGenius.captureEtsyImages ? ListingGenius.captureEtsyImages() : [];
+  } else if (platform === 'amazon') {
+    images = ListingGenius.captureAmazonImages ? ListingGenius.captureAmazonImages() : [];
+  }
+
+  // If platform-specific capture didn't work, try generic
+  if (images.length === 0) {
+    images = captureGenericImages(genericSelectors);
+  }
+
+  return images;
+};
+
+/**
+ * Capture images using generic selectors
+ */
+function captureGenericImages(selectors) {
+  const images = [];
+  const seenUrls = new Set();
+
+  selectors.forEach(selector => {
+    const elements = document.querySelectorAll(selector);
+    elements.forEach(img => {
+      const src = getHighResImageUrl(img);
+      if (src && !seenUrls.has(src) && isValidProductImage(img)) {
+        seenUrls.add(src);
+        images.push({
+          src: src,
+          thumbnail: img.src,
+          alt: img.alt || '',
+          width: img.naturalWidth || img.width,
+          height: img.naturalHeight || img.height
+        });
+      }
+    });
+  });
+
+  return images.slice(0, 20); // Limit to 20 images
+}
+
+/**
+ * Get high resolution image URL
+ */
+function getHighResImageUrl(img) {
+  // Try various data attributes for high-res versions
+  const highResAttrs = [
+    'data-src',
+    'data-original',
+    'data-large-src',
+    'data-high-res-src',
+    'data-zoom-src',
+    'data-full-src'
+  ];
+
+  for (const attr of highResAttrs) {
+    const value = img.getAttribute(attr);
+    if (value && value.startsWith('http')) {
+      return value;
+    }
+  }
+
+  // Try srcset for high-res
+  if (img.srcset) {
+    const srcset = img.srcset.split(',');
+    const lastSrc = srcset[srcset.length - 1].trim().split(' ')[0];
+    if (lastSrc) return lastSrc;
+  }
+
+  return img.src;
+}
+
+/**
+ * Check if image is a valid product image
+ */
+function isValidProductImage(img) {
+  // Skip tiny images (icons, etc.)
+  const minSize = 100;
+  if (img.naturalWidth < minSize || img.naturalHeight < minSize) {
+    return false;
+  }
+
+  // Skip common non-product image patterns
+  const src = img.src.toLowerCase();
+  const skipPatterns = [
+    'logo', 'icon', 'avatar', 'sprite', 'banner',
+    'badge', 'button', 'nav', 'footer', 'header',
+    'pixel', 'tracking', 'analytics', 'ad'
+  ];
+
+  return !skipPatterns.some(pattern => src.includes(pattern));
+}
+
+/**
  * Message listener for content script
  */
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -234,6 +345,17 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       sendResponse({ data: pageData });
       break;
 
+    case 'captureProductImages':
+      const images = ListingGenius.captureProductImages();
+      sendResponse({ images: images });
+      break;
+
+    case 'useGeneratedImages':
+      ListingGenius.useGeneratedImages(data.images)
+        .then(() => sendResponse({ success: true }))
+        .catch(error => sendResponse({ error: error.message }));
+      return true;
+
     case 'ping':
       sendResponse({ status: 'ok', platform: ListingGenius.detectPlatform() });
       break;
@@ -244,6 +366,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   return false;
 });
+
+/**
+ * Use generated images in listing (to be implemented by platform-specific scripts)
+ */
+ListingGenius.useGeneratedImages = async function(images) {
+  ListingGenius.showToast('Images ready! You can download and upload them manually.', 'info');
+};
 
 /**
  * Auto-fill form (to be implemented by platform-specific scripts)

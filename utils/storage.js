@@ -9,9 +9,16 @@ export async function getSettings() {
   return data.settings || {
     openaiApiKey: '',
     keywordsEverywhereApiKey: '',
+    falApiKey: '',
     defaultPlatform: 'etsy',
     defaultTone: 'professional',
-    autoAnalyze: true
+    autoAnalyze: true,
+    imageSettings: {
+      defaultUpscaleSize: 3000,
+      autoRemoveBackground: true,
+      preferredLifestyleStyle: 'photorealistic',
+      savedScenePresets: []
+    }
   };
 }
 
@@ -211,4 +218,170 @@ export async function importUserData(data) {
   if (data.templates) {
     await chrome.storage.local.set({ templates: data.templates });
   }
+}
+
+// ==========================================
+// Image Studio Storage Functions
+// ==========================================
+
+/**
+ * Get image generation history
+ * @returns {Promise<Object>} - Image history
+ */
+export async function getImageHistory() {
+  const data = await chrome.storage.local.get('imageHistory');
+  return data.imageHistory || {
+    generated: [],
+    favorites: [],
+    presets: []
+  };
+}
+
+/**
+ * Add generated image to history
+ * @param {Object} imageData - Image data to save
+ */
+export async function addToImageHistory(imageData) {
+  const history = await getImageHistory();
+
+  history.generated.unshift({
+    id: Date.now().toString(),
+    ...imageData,
+    createdAt: new Date().toISOString()
+  });
+
+  // Keep last 50 generated images
+  if (history.generated.length > 50) {
+    history.generated = history.generated.slice(0, 50);
+  }
+
+  await chrome.storage.local.set({ imageHistory: history });
+  return history;
+}
+
+/**
+ * Add image to favorites
+ * @param {Object} imageData - Image to favorite
+ */
+export async function addToFavorites(imageData) {
+  const history = await getImageHistory();
+
+  const exists = history.favorites.find(f => f.imageUrl === imageData.imageUrl);
+  if (!exists) {
+    history.favorites.unshift({
+      id: Date.now().toString(),
+      ...imageData,
+      favoritedAt: new Date().toISOString()
+    });
+  }
+
+  await chrome.storage.local.set({ imageHistory: history });
+  return history;
+}
+
+/**
+ * Remove image from favorites
+ * @param {string} imageId - Image ID to remove
+ */
+export async function removeFromFavorites(imageId) {
+  const history = await getImageHistory();
+  history.favorites = history.favorites.filter(f => f.id !== imageId);
+  await chrome.storage.local.set({ imageHistory: history });
+  return history;
+}
+
+/**
+ * Save custom scene preset
+ * @param {Object} preset - Preset data
+ */
+export async function saveScenePreset(preset) {
+  const history = await getImageHistory();
+
+  history.presets.push({
+    id: Date.now().toString(),
+    ...preset,
+    createdAt: new Date().toISOString()
+  });
+
+  await chrome.storage.local.set({ imageHistory: history });
+  return history;
+}
+
+/**
+ * Delete custom scene preset
+ * @param {string} presetId - Preset ID to delete
+ */
+export async function deleteScenePreset(presetId) {
+  const history = await getImageHistory();
+  history.presets = history.presets.filter(p => p.id !== presetId);
+  await chrome.storage.local.set({ imageHistory: history });
+  return history;
+}
+
+/**
+ * Get image credits usage
+ * @returns {Promise<Object>} - Image credits data
+ */
+export async function getImageCredits() {
+  const data = await chrome.storage.local.get('imageCredits');
+  return data.imageCredits || {
+    used: 0,
+    limit: 20,
+    resetDate: getNextResetDate(),
+    history: []
+  };
+}
+
+/**
+ * Use image credit
+ * @param {string} operation - Operation type
+ * @param {number} cost - Credit cost
+ */
+export async function useImageCredit(operation, cost = 1) {
+  const credits = await getImageCredits();
+
+  // Check if we need to reset
+  if (credits.resetDate && new Date() > new Date(credits.resetDate)) {
+    credits.used = 0;
+    credits.resetDate = getNextResetDate();
+    credits.history = [];
+  }
+
+  credits.used += cost;
+  credits.history.push({
+    operation,
+    cost,
+    date: new Date().toISOString()
+  });
+
+  // Keep history to last 100 items
+  if (credits.history.length > 100) {
+    credits.history = credits.history.slice(-100);
+  }
+
+  await chrome.storage.local.set({ imageCredits: credits });
+  return credits;
+}
+
+/**
+ * Check if user has image credits remaining
+ * @param {number} required - Credits required
+ * @returns {Promise<boolean>}
+ */
+export async function hasImageCredits(required = 1) {
+  const credits = await getImageCredits();
+  return credits.used + required <= credits.limit;
+}
+
+/**
+ * Clear image history
+ */
+export async function clearImageHistory() {
+  await chrome.storage.local.set({
+    imageHistory: {
+      generated: [],
+      favorites: [],
+      presets: []
+    }
+  });
 }

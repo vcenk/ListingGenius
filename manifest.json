@@ -6,7 +6,8 @@
   "permissions": [
     "activeTab",
     "storage",
-    "sidePanel"
+    "sidePanel",
+    "downloads"
   ],
   "host_permissions": [
     "https://www.etsy.com/*",
@@ -14,7 +15,12 @@
     "https://www.amazon.co.uk/*",
     "https://www.amazon.ca/*",
     "https://api.openai.com/*",
-    "https://api.keywordseverywhere.com/*"
+    "https://api.keywordseverywhere.com/*",
+    "https://fal.run/*",
+    "https://queue.fal.run/*",
+    "https://rest.fal.run/*",
+    "https://storage.fal.run/*",
+    "https://*.fal.ai/*"
   ],
   "action": {
     "default_popup": "popup/popup.html",

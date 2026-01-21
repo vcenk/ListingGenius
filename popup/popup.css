@@ -260,6 +260,19 @@ body {
   box-shadow: var(--shadow);
 }
 
+.action-btn.highlight {
+  background: linear-gradient(135deg, #a855f7 0%, #6366f1 100%);
+  border-color: #a855f7;
+  color: var(--white);
+}
+
+.action-btn.highlight:hover {
+  background: linear-gradient(135deg, #9333ea 0%, #4f46e5 100%);
+  border-color: #9333ea;
+  color: var(--white);
+  box-shadow: var(--shadow-md);
+}
+
 .action-icon {
   font-size: 20px;
 }

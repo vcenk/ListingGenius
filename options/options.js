@@ -5,10 +5,13 @@ const elements = {
   // API Keys
   openaiApiKey: document.getElementById('openaiApiKey'),
   keywordsApiKey: document.getElementById('keywordsApiKey'),
+  falApiKey: document.getElementById('falApiKey'),
   testOpenaiBtn: document.getElementById('testOpenaiBtn'),
   testKeywordsBtn: document.getElementById('testKeywordsBtn'),
+  testFalBtn: document.getElementById('testFalBtn'),
   openaiStatus: document.getElementById('openaiStatus'),
   keywordsStatus: document.getElementById('keywordsStatus'),
+  falStatus: document.getElementById('falStatus'),
 
   // Preferences
   defaultPlatform: document.getElementById('defaultPlatform'),
@@ -48,6 +51,7 @@ function setupEventListeners() {
   // Test buttons
   elements.testOpenaiBtn.addEventListener('click', testOpenAI);
   elements.testKeywordsBtn.addEventListener('click', testKeywordsEverywhere);
+  elements.testFalBtn.addEventListener('click', testFalAI);
 
   // Usage
   elements.resetUsageBtn.addEventListener('click', resetUsage);
@@ -65,6 +69,7 @@ function setupEventListeners() {
   const inputs = [
     elements.openaiApiKey,
     elements.keywordsApiKey,
+    elements.falApiKey,
     elements.defaultPlatform,
     elements.defaultTone,
     elements.autoAnalyze
@@ -84,6 +89,7 @@ async function loadSettings() {
 
     elements.openaiApiKey.value = settings.openaiApiKey || '';
     elements.keywordsApiKey.value = settings.keywordsEverywhereApiKey || '';
+    elements.falApiKey.value = settings.falApiKey || '';
     elements.defaultPlatform.value = settings.defaultPlatform || 'etsy';
     elements.defaultTone.value = settings.defaultTone || 'professional';
     elements.autoAnalyze.checked = settings.autoAnalyze !== false;
@@ -91,6 +97,7 @@ async function loadSettings() {
     // Update status badges
     updateApiStatus('openai', !!settings.openaiApiKey);
     updateApiStatus('keywords', !!settings.keywordsEverywhereApiKey);
+    updateApiStatus('fal', !!settings.falApiKey);
   } catch (error) {
     showAlert('Failed to load settings', 'error');
   }
@@ -136,6 +143,7 @@ async function saveSettings() {
     const settings = {
       openaiApiKey: elements.openaiApiKey.value.trim(),
       keywordsEverywhereApiKey: elements.keywordsApiKey.value.trim(),
+      falApiKey: elements.falApiKey.value.trim(),
       defaultPlatform: elements.defaultPlatform.value,
       defaultTone: elements.defaultTone.value,
       autoAnalyze: elements.autoAnalyze.checked
@@ -149,6 +157,7 @@ async function saveSettings() {
     // Update status badges
     updateApiStatus('openai', !!settings.openaiApiKey);
     updateApiStatus('keywords', !!settings.keywordsEverywhereApiKey);
+    updateApiStatus('fal', !!settings.falApiKey);
   } catch (error) {
     showAlert('Failed to save settings: ' + error.message, 'error');
   } finally {
@@ -229,7 +238,16 @@ async function testKeywordsEverywhere() {
 }
 
 function updateApiStatus(api, isConnected) {
-  const statusElement = api === 'openai' ? elements.openaiStatus : elements.keywordsStatus;
+  let statusElement;
+  if (api === 'openai') {
+    statusElement = elements.openaiStatus;
+  } else if (api === 'keywords') {
+    statusElement = elements.keywordsStatus;
+  } else if (api === 'fal') {
+    statusElement = elements.falStatus;
+  }
+
+  if (!statusElement) return;
 
   if (isConnected) {
     statusElement.textContent = 'Connected';
@@ -237,6 +255,47 @@ function updateApiStatus(api, isConnected) {
   } else {
     statusElement.textContent = 'Not configured';
     statusElement.className = 'status-badge disconnected';
+  }
+}
+
+async function testFalAI() {
+  const apiKey = elements.falApiKey.value.trim();
+
+  if (!apiKey) {
+    showAlert('Please enter a fal.ai API key first', 'error');
+    return;
+  }
+
+  elements.testFalBtn.disabled = true;
+  elements.testFalBtn.textContent = 'Testing...';
+
+  try {
+    // Test with a simple API call to fal.ai
+    const response = await fetch('https://queue.fal.run/fal-ai/birefnet', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Key ${apiKey}`
+      },
+      body: JSON.stringify({
+        image_url: 'https://fal.media/files/elephant/8kkhB4aBnXMvnSp9S4N9v.png'
+      })
+    });
+
+    if (response.ok || response.status === 200 || response.status === 202) {
+      updateApiStatus('fal', true);
+      showAlert('fal.ai API key is valid!', 'success');
+    } else {
+      const error = await response.json().catch(() => ({}));
+      updateApiStatus('fal', false);
+      showAlert('Invalid API key: ' + (error.detail || error.message || 'Unknown error'), 'error');
+    }
+  } catch (error) {
+    updateApiStatus('fal', false);
+    showAlert('Connection failed: ' + error.message, 'error');
+  } finally {
+    elements.testFalBtn.disabled = false;
+    elements.testFalBtn.textContent = 'Test';
   }
 }
 
@@ -334,6 +393,7 @@ async function clearAllData() {
       settings: {
         openaiApiKey: '',
         keywordsEverywhereApiKey: '',
+        falApiKey: '',
         defaultPlatform: 'etsy',
         defaultTone: 'professional',
         autoAnalyze: true
@@ -341,6 +401,12 @@ async function clearAllData() {
       usage: {
         creditsUsed: 0,
         creditsLimit: 50,
+        resetDate: getNextResetDate(),
+        history: []
+      },
+      imageCredits: {
+        used: 0,
+        limit: 20,
         resetDate: getNextResetDate(),
         history: []
       }

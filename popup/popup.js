@@ -40,6 +40,7 @@ const elements = {
   generateListingBtn: document.getElementById('generateListingBtn'),
   spyListingBtn: document.getElementById('spyListingBtn'),
   analyzePageBtn: document.getElementById('analyzePageBtn'),
+  imageStudioBtn: document.getElementById('imageStudioBtn'),
 
   // Generation Section
   generationSection: document.getElementById('generationSection'),
@@ -103,6 +104,7 @@ function setupEventListeners() {
   elements.generateListingBtn.addEventListener('click', showGenerationSection);
   elements.spyListingBtn.addEventListener('click', spyListing);
   elements.analyzePageBtn.addEventListener('click', analyzePage);
+  elements.imageStudioBtn.addEventListener('click', openImageStudio);
 
   // Generation section
   elements.closeGeneration.addEventListener('click', hideGenerationSection);
@@ -504,4 +506,19 @@ async function incrementCredits() {
 
 function openSettings() {
   chrome.runtime.openOptionsPage();
+}
+
+async function openImageStudio() {
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+
+    await chrome.runtime.sendMessage({
+      action: 'openImageStudio',
+      data: { tabId: tab?.id }
+    });
+
+    window.close();
+  } catch (error) {
+    showError('Failed to open Image Studio');
+  }
 }

@@ -26,6 +26,99 @@ const AMAZON_SELECTORS = {
 };
 
 /**
+ * Capture Amazon product images
+ */
+ListingGenius.captureAmazonImages = function() {
+  const images = [];
+  const seenUrls = new Set();
+
+  // Amazon image selectors (prioritized)
+  const selectors = [
+    // Main product image
+    '#landingImage',
+    '#imgTagWrapperId img',
+    // Thumbnail carousel
+    '#altImages img',
+    '.imageThumbnail img',
+    // Dynamic images
+    '.a-dynamic-image',
+    // Image block
+    '#imageBlock img',
+    '.imgTagWrapper img'
+  ];
+
+  selectors.forEach(selector => {
+    const elements = document.querySelectorAll(selector);
+    elements.forEach(img => {
+      // Get high-res URL from data attributes
+      let src = img.getAttribute('data-old-hires') ||
+                img.getAttribute('data-a-hires') ||
+                getAmazonHighResFromDynamic(img) ||
+                img.src;
+
+      // Clean up Amazon image URLs to get higher resolution
+      if (src) {
+        // Remove size constraints from URL
+        src = src.replace(/\._[A-Z]{2}\d+_\./, '.');
+        src = src.replace(/\._S[XY]\d+_\./, '.');
+      }
+
+      if (src && !seenUrls.has(src) && isValidAmazonImage(src)) {
+        seenUrls.add(src);
+        images.push({
+          src: src,
+          thumbnail: img.src,
+          alt: img.alt || '',
+          width: img.naturalWidth || 1000,
+          height: img.naturalHeight || 1000
+        });
+      }
+    });
+  });
+
+  return images.slice(0, 10);
+};
+
+/**
+ * Get high-res URL from Amazon dynamic image data
+ */
+function getAmazonHighResFromDynamic(img) {
+  const dynamicData = img.getAttribute('data-a-dynamic-image');
+  if (!dynamicData) return null;
+
+  try {
+    const parsed = JSON.parse(dynamicData);
+    const urls = Object.keys(parsed);
+    // Get the largest image (last in the object)
+    return urls[urls.length - 1] || null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Check if URL is a valid Amazon product image
+ */
+function isValidAmazonImage(src) {
+  if (!src) return false;
+
+  // Must be from Amazon's image CDN
+  const validDomains = [
+    'images-na.ssl-images-amazon.com',
+    'm.media-amazon.com',
+    'images-amazon.com'
+  ];
+
+  const isAmazonDomain = validDomains.some(domain => src.includes(domain));
+
+  // Skip sprites and tiny icons
+  const skipPatterns = ['sprite', 'icon', 'pixel', 'grey-pixel', 'transparent'];
+  const hasSkipPattern = skipPatterns.some(pattern => src.toLowerCase().includes(pattern));
+
+  return isAmazonDomain && !hasSkipPattern;
+}
+
+/**
  * Override extractPageData for Amazon
  */
 ListingGenius.extractPageData = function() {
