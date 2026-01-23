@@ -1,4 +1,22 @@
 // ListingGenius API Utilities
+//
+// ⚠️  SECURITY WARNING - DEPRECATED ⚠️
+//
+// This file contains DIRECT API calls that expose API keys on the client side.
+// DO NOT use these functions in production!
+//
+// Instead, use the backend proxy via:
+//   - backend-api.js for all API calls
+//   - Backend endpoints: /api/openai/chat, /api/openai/vision, /api/keywords/search
+//
+// The backend proxy provides:
+//   - API key protection (keys never exposed to client)
+//   - Rate limiting
+//   - Usage tracking
+//   - User authentication
+//
+// This file is kept for reference/development only.
+// TODO: Remove this file once backend integration is complete.
 
 const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
 

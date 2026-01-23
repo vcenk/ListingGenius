@@ -1,0 +1,30 @@
+{
+  "version": 2,
+  "framework": null,
+  "buildCommand": "",
+  "outputDirectory": "",
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "headers": {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Extension-Id"
+      },
+      "continue": true
+    },
+    {
+      "src": "/api/(.*)",
+      "methods": ["OPTIONS"],
+      "dest": "/api/cors"
+    }
+  ],
+  "env": {
+    "OPENAI_API_KEY": "@openai_api_key",
+    "FAL_API_KEY": "@fal_api_key",
+    "KEYWORDS_EVERYWHERE_API_KEY": "@keywords_everywhere_api_key",
+    "JWT_SECRET": "@jwt_secret",
+    "EXTENSION_ID": "@extension_id",
+    "FIREBASE_SERVICE_ACCOUNT": "@firebase_service_account"
+  }
+}

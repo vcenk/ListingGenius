@@ -1,5 +1,47 @@
 // ListingGenius Image Studio
 
+/**
+ * Escape HTML to prevent XSS attacks
+ * @param {string} str - String to escape
+ * @returns {string} - Escaped string
+ */
+function escapeHtml(str) {
+  if (!str || typeof str !== 'string') return '';
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+/**
+ * Validate and sanitize image URL
+ * @param {string} url - URL to validate
+ * @returns {string} - Sanitized URL or empty string
+ */
+function sanitizeImageUrl(url) {
+  if (!url || typeof url !== 'string') return '';
+
+  // Allow data URLs (base64 images)
+  if (url.startsWith('data:image/')) {
+    // Validate it's actually an image data URL
+    if (/^data:image\/(png|jpeg|jpg|gif|webp|svg\+xml);base64,/.test(url)) {
+      return url;
+    }
+    return '';
+  }
+
+  // Validate HTTP(S) URLs
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+      return '';
+    }
+    // Return the validated URL
+    return parsed.href;
+  } catch {
+    return '';
+  }
+}
+
 // State
 const state = {
   images: [],
@@ -186,12 +228,16 @@ function closeCaptureModal() {
 }
 
 function renderCaptureGrid() {
-  elements.captureGrid.innerHTML = state.capturedImages.map((img, index) => `
+  elements.captureGrid.innerHTML = state.capturedImages.map((img, index) => {
+    const safeSrc = sanitizeImageUrl(img.thumbnail || img.src);
+    if (!safeSrc) return ''; // Skip invalid URLs
+    return `
     <div class="capture-item ${state.selectedCaptured.has(index) ? 'selected' : ''}" data-index="${index}">
-      <img src="${img.thumbnail || img.src}" alt="Product image">
+      <img src="${escapeHtml(safeSrc)}" alt="Product image">
       <div class="checkbox">${state.selectedCaptured.has(index) ? '&#10003;' : ''}</div>
     </div>
-  `).join('');
+  `;
+  }).join('');
 
   elements.captureGrid.querySelectorAll('.capture-item').forEach(item => {
     item.addEventListener('click', () => toggleCapturedImage(parseInt(item.dataset.index)));
@@ -252,13 +298,18 @@ function handleFileUpload(event) {
 
 // Image Grid
 function renderImageGrid() {
-  elements.imageGrid.innerHTML = state.images.map(img => `
-    <div class="image-card ${state.selectedImages.has(img.id) ? 'selected' : ''}" data-id="${img.id}">
-      <img src="${img.thumbnail || img.src}" alt="Product image">
+  elements.imageGrid.innerHTML = state.images.map(img => {
+    const safeSrc = sanitizeImageUrl(img.thumbnail || img.src);
+    if (!safeSrc) return ''; // Skip invalid URLs
+    const safeId = escapeHtml(String(img.id));
+    return `
+    <div class="image-card ${state.selectedImages.has(img.id) ? 'selected' : ''}" data-id="${safeId}">
+      <img src="${escapeHtml(safeSrc)}" alt="Product image">
       <div class="checkbox">${state.selectedImages.has(img.id) ? '&#10003;' : ''}</div>
-      <button class="delete-btn" data-id="${img.id}">&times;</button>
+      <button class="delete-btn" data-id="${safeId}">&times;</button>
     </div>
-  `).join('');
+  `;
+  }).join('');
 
   elements.imageGrid.querySelectorAll('.image-card').forEach(card => {
     card.addEventListener('click', (e) => {
@@ -512,15 +563,20 @@ function getPresetPrompt(preset) {
 
 // Results
 function showResults() {
-  elements.resultsGrid.innerHTML = state.generatedImages.map(img => `
-    <div class="result-card" data-id="${img.id}">
-      <img src="${img.imageUrl}" alt="Generated image">
+  elements.resultsGrid.innerHTML = state.generatedImages.map(img => {
+    const safeUrl = sanitizeImageUrl(img.imageUrl);
+    if (!safeUrl) return ''; // Skip invalid URLs
+    const safeId = escapeHtml(String(img.id));
+    return `
+    <div class="result-card" data-id="${safeId}">
+      <img src="${escapeHtml(safeUrl)}" alt="Generated image">
       <div class="result-card-actions">
-        <button class="download-btn" data-url="${img.imageUrl}">Download</button>
-        <button class="copy-btn" data-url="${img.imageUrl}">Copy</button>
+        <button class="download-btn" data-url="${escapeHtml(safeUrl)}">Download</button>
+        <button class="copy-btn" data-url="${escapeHtml(safeUrl)}">Copy</button>
       </div>
     </div>
-  `).join('');
+  `;
+  }).join('');
 
   elements.resultsGrid.querySelectorAll('.download-btn').forEach(btn => {
     btn.addEventListener('click', () => downloadImage(btn.dataset.url));

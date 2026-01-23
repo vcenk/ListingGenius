@@ -2,6 +2,74 @@
 
 const FAL_API_BASE = 'https://queue.fal.run';
 
+// Allowed image URL domains for security
+const ALLOWED_IMAGE_DOMAINS = [
+  'fal.run',
+  'fal.ai',
+  'storage.fal.run',
+  'etsy.com',
+  'etsystatic.com',
+  'amazon.com',
+  'media-amazon.com',
+  'images-amazon.com',
+  'ssl-images-amazon.com',
+  'm.media-amazon.com'
+];
+
+/**
+ * Validate image URL for security
+ * @param {string} url - URL to validate
+ * @returns {boolean} - Whether URL is valid and allowed
+ */
+function isValidImageUrl(url) {
+  if (!url || typeof url !== 'string') {
+    return false;
+  }
+
+  // Allow base64 data URLs
+  if (url.startsWith('data:image/')) {
+    return true;
+  }
+
+  try {
+    const parsed = new URL(url);
+
+    // Only allow HTTPS
+    if (parsed.protocol !== 'https:') {
+      return false;
+    }
+
+    // Check against allowed domains
+    const hostname = parsed.hostname.toLowerCase();
+    return ALLOWED_IMAGE_DOMAINS.some(domain =>
+      hostname === domain || hostname.endsWith('.' + domain)
+    );
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Validate base64 string format
+ * @param {string} base64 - Base64 string to validate
+ * @returns {boolean} - Whether format is valid
+ */
+function isValidBase64(base64) {
+  if (!base64 || typeof base64 !== 'string') {
+    return false;
+  }
+
+  // Check for data URL format
+  const dataUrlPattern = /^data:image\/(png|jpeg|jpg|gif|webp);base64,[A-Za-z0-9+/]+=*$/;
+  if (dataUrlPattern.test(base64)) {
+    return true;
+  }
+
+  // Check raw base64
+  const base64Pattern = /^[A-Za-z0-9+/]+=*$/;
+  return base64Pattern.test(base64);
+}
+
 // Model endpoints
 const MODELS = {
   // Background removal
@@ -160,6 +228,11 @@ async function getQueueResult(model, requestId, apiKey) {
  * @returns {Promise<Object>} - Result with image URL
  */
 export async function removeBackground(imageUrl, options = {}, apiKey) {
+  // Security: Validate image URL
+  if (!isValidImageUrl(imageUrl)) {
+    throw new Error('Invalid or unauthorized image URL');
+  }
+
   const {
     model = 'birefnet',
     refineForeground = true,
@@ -193,6 +266,11 @@ export async function removeBackground(imageUrl, options = {}, apiKey) {
  * @returns {Promise<Object>} - Result
  */
 export async function replaceBackground(imageUrl, options = {}, apiKey) {
+  // Security: Validate image URL
+  if (!isValidImageUrl(imageUrl)) {
+    throw new Error('Invalid or unauthorized image URL');
+  }
+
   const {
     color = '#FFFFFF',
     prompt = null,
@@ -244,6 +322,11 @@ export async function replaceBackground(imageUrl, options = {}, apiKey) {
  * @returns {Promise<Object>} - Result
  */
 export async function generateLifestyleImage(productImageUrl, scenePrompt, options = {}, apiKey) {
+  // Security: Validate image URL
+  if (!isValidImageUrl(productImageUrl)) {
+    throw new Error('Invalid or unauthorized image URL');
+  }
+
   const {
     style = 'photorealistic',
     guidanceScale = 7.5,
@@ -302,6 +385,11 @@ function buildLifestylePrompt(basePrompt, style) {
  * @returns {Promise<Object>} - Result
  */
 export async function upscaleImage(imageUrl, options = {}, apiKey) {
+  // Security: Validate image URL
+  if (!isValidImageUrl(imageUrl)) {
+    throw new Error('Invalid or unauthorized image URL');
+  }
+
   const {
     scale = 4,
     model = 'aurasr'
@@ -332,6 +420,11 @@ export async function upscaleImage(imageUrl, options = {}, apiKey) {
  * @returns {Promise<Object>} - Result with multiple images
  */
 export async function generateVariations(imageUrl, count = 3, options = {}, apiKey) {
+  // Security: Validate image URL
+  if (!isValidImageUrl(imageUrl)) {
+    throw new Error('Invalid or unauthorized image URL');
+  }
+
   const {
     strength = 0.6,
     guidanceScale = 7.5
@@ -363,6 +456,11 @@ export async function generateVariations(imageUrl, count = 3, options = {}, apiK
  * @returns {Promise<Object>} - Result
  */
 export async function createWhiteBackground(imageUrl, options = {}, apiKey) {
+  // Security: Validate image URL
+  if (!isValidImageUrl(imageUrl)) {
+    throw new Error('Invalid or unauthorized image URL');
+  }
+
   const {
     targetWidth = 3000,
     targetHeight = 3000,
@@ -403,6 +501,11 @@ export async function createWhiteBackground(imageUrl, options = {}, apiKey) {
  * @returns {Promise<Object>} - Optimized result
  */
 export async function optimizeForMarketplace(imageUrl, marketplace, imageType, apiKey) {
+  // Security: Validate image URL
+  if (!isValidImageUrl(imageUrl)) {
+    throw new Error('Invalid or unauthorized image URL');
+  }
+
   const config = MARKETPLACE_CONFIG[marketplace];
 
   if (!config) {
@@ -437,6 +540,11 @@ export async function optimizeForMarketplace(imageUrl, marketplace, imageType, a
  * @returns {Promise<Object>} - Processed result
  */
 export async function processImage(imageUrl, options, apiKey) {
+  // Security: Validate image URL
+  if (!isValidImageUrl(imageUrl)) {
+    throw new Error('Invalid or unauthorized image URL');
+  }
+
   const {
     operation,
     marketplace = 'amazon',
@@ -478,13 +586,28 @@ export async function processImage(imageUrl, options, apiKey) {
  * @returns {Promise<string>} - Base64 string
  */
 export async function urlToBase64(url) {
+  // Security: Validate URL
+  if (!isValidImageUrl(url)) {
+    throw new Error('Invalid or unauthorized image URL');
+  }
+
   const response = await fetch(url);
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch image');
+  }
+
   const blob = await response.blob();
+
+  // Validate that response is actually an image
+  if (!blob.type.startsWith('image/')) {
+    throw new Error('URL does not point to a valid image');
+  }
 
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onloadend = () => resolve(reader.result);
-    reader.onerror = reject;
+    reader.onerror = () => reject(new Error('Failed to read image data'));
     reader.readAsDataURL(blob);
   });
 }
@@ -495,16 +618,42 @@ export async function urlToBase64(url) {
  * @returns {Blob} - Blob object
  */
 export function base64ToBlob(base64) {
-  const parts = base64.split(';base64,');
-  const contentType = parts[0].split(':')[1];
-  const raw = atob(parts[1]);
-  const array = new Uint8Array(raw.length);
-
-  for (let i = 0; i < raw.length; i++) {
-    array[i] = raw.charCodeAt(i);
+  // Security: Validate base64 format
+  if (!base64 || typeof base64 !== 'string') {
+    throw new Error('Invalid base64 input');
   }
 
-  return new Blob([array], { type: contentType });
+  if (!base64.includes(';base64,')) {
+    throw new Error('Invalid base64 data URL format');
+  }
+
+  try {
+    const parts = base64.split(';base64,');
+    if (parts.length !== 2) {
+      throw new Error('Malformed base64 data URL');
+    }
+
+    const contentType = parts[0].split(':')[1];
+
+    // Validate content type is an image
+    if (!contentType || !contentType.startsWith('image/')) {
+      throw new Error('Base64 data is not an image');
+    }
+
+    const raw = atob(parts[1]);
+    const array = new Uint8Array(raw.length);
+
+    for (let i = 0; i < raw.length; i++) {
+      array[i] = raw.charCodeAt(i);
+    }
+
+    return new Blob([array], { type: contentType });
+  } catch (error) {
+    if (error.message.includes('Base64') || error.message.includes('base64') || error.message.includes('image')) {
+      throw error;
+    }
+    throw new Error('Failed to decode base64 data');
+  }
 }
 
 /**
@@ -513,13 +662,32 @@ export function base64ToBlob(base64) {
  * @param {string} filename - Download filename
  */
 export async function downloadImage(url, filename) {
+  // Security: Validate URL
+  if (!isValidImageUrl(url)) {
+    throw new Error('Invalid or unauthorized image URL');
+  }
+
+  // Sanitize filename to prevent path traversal
+  const sanitizedFilename = filename.replace(/[^a-zA-Z0-9._-]/g, '_');
+
   const response = await fetch(url);
+
+  if (!response.ok) {
+    throw new Error('Failed to download image');
+  }
+
   const blob = await response.blob();
+
+  // Validate response is an image
+  if (!blob.type.startsWith('image/')) {
+    throw new Error('Downloaded content is not an image');
+  }
+
   const objectUrl = URL.createObjectURL(blob);
 
   const a = document.createElement('a');
   a.href = objectUrl;
-  a.download = filename;
+  a.download = sanitizedFilename;
   a.click();
 
   URL.revokeObjectURL(objectUrl);

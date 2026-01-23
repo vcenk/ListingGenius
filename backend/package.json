@@ -1,0 +1,22 @@
+{
+  "name": "listinggenius-backend",
+  "version": "1.0.0",
+  "description": "Backend API proxy for ListingGenius Chrome Extension",
+  "private": true,
+  "scripts": {
+    "dev": "vercel dev",
+    "deploy": "vercel --prod",
+    "deploy:preview": "vercel"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "vercel": "^37.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

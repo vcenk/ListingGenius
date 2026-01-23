@@ -6,9 +6,11 @@
   "permissions": [
     "activeTab",
     "storage",
-    "sidePanel",
-    "downloads"
+    "sidePanel"
   ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'; style-src 'self' 'unsafe-inline'"
+  },
   "host_permissions": [
     "https://www.etsy.com/*",
     "https://www.amazon.com/*",

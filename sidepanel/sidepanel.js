@@ -268,7 +268,7 @@ function renderKeywords() {
           <span class="trend-indicator ${keyword.trend}">
             ${getTrendIcon(keyword.trend)} ${keyword.trend}
           </span>
-          ${keyword.source ? `<span class="source-tag">${keyword.source}</span>` : ''}
+          ${keyword.source ? `<span class="source-tag">${escapeHtml(keyword.source)}</span>` : ''}
         </div>
       </div>
       <div class="keyword-actions">

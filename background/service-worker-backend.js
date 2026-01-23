@@ -1,9 +1,13 @@
-// ListingGenius Background Service Worker
+/**
+ * ListingGenius Background Service Worker (Backend Mode)
+ *
+ * This version uses the secure Vercel backend for all API calls.
+ * No API keys are stored in the extension.
+ */
 
-import { callOpenAI, analyzeImage } from '../utils/api.js';
-import { getSettings, saveToCache, getFromCache, useImageCredit, hasImageCredits } from '../utils/storage.js';
-import { extractKeywords, getKeywordData } from '../utils/keywords.js';
-import { processImage, createWhiteBackground, generateLifestyleImage, upscaleImage, removeBackground, generateVariations } from '../utils/fal-api.js';
+import * as BackendAPI from '../utils/backend-api.js';
+import { saveToCache, getFromCache } from '../utils/storage.js';
+import { extractKeywords } from '../utils/keywords.js';
 
 // Allowed origins for message passing
 const ALLOWED_ORIGINS = [
@@ -13,11 +17,11 @@ const ALLOWED_ORIGINS = [
   'https://www.amazon.ca'
 ];
 
-// Rate limiting
+// Rate limiting (additional client-side protection)
 const rateLimiter = {
   requests: new Map(),
   maxRequests: 30,
-  windowMs: 60000, // 1 minute
+  windowMs: 60000,
 
   checkLimit(key) {
     const now = Date.now();
@@ -41,16 +45,12 @@ const rateLimiter = {
 
 /**
  * Validate message sender
- * @param {Object} sender - Chrome runtime sender object
- * @returns {boolean} - Whether sender is trusted
  */
 function isValidSender(sender) {
-  // Allow messages from extension pages (popup, options, sidepanel, image-studio)
   if (sender.id === chrome.runtime.id) {
     return true;
   }
 
-  // Allow messages from content scripts on allowed origins
   if (sender.url) {
     try {
       const url = new URL(sender.url);
@@ -65,13 +65,11 @@ function isValidSender(sender) {
 
 // Message handlers
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  // Security: Validate sender
   if (!isValidSender(sender)) {
     sendResponse({ error: 'Unauthorized sender' });
     return false;
   }
 
-  // Rate limiting
   const rateLimitKey = sender.tab?.id || sender.id || 'unknown';
   if (!rateLimiter.checkLimit(rateLimitKey)) {
     sendResponse({ error: 'Rate limit exceeded. Please try again later.' });
@@ -80,22 +78,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   handleMessage(message, sender)
     .then(sendResponse)
-    .catch(error => sendResponse({ error: sanitizeErrorMessage(error.message) }));
-  return true; // Keep channel open for async response
+    .catch(error => sendResponse({ error: error.message }));
+  return true;
 });
-
-/**
- * Sanitize error messages to prevent information leakage
- * @param {string} message - Original error message
- * @returns {string} - Sanitized error message
- */
-function sanitizeErrorMessage(message) {
-  // Remove API key patterns
-  const sanitized = message.replace(/key[=:]\s*['"]?[a-zA-Z0-9_-]+['"]?/gi, 'key=[REDACTED]');
-
-  // Remove URLs that might contain tokens
-  return sanitized.replace(/https?:\/\/[^\s]+token=[^\s&]+/gi, '[URL REDACTED]');
-}
 
 async function handleMessage(message, sender) {
   const { action, data } = message;
@@ -130,6 +115,12 @@ async function handleMessage(message, sender) {
     case 'getImageCredits':
       return await getImageCreditsInfo();
 
+    case 'getUserInfo':
+      return await BackendAPI.getUserInfo();
+
+    case 'getUsage':
+      return await BackendAPI.getUsage();
+
     default:
       throw new Error(`Unknown action: ${action}`);
   }
@@ -137,21 +128,12 @@ async function handleMessage(message, sender) {
 
 // Demand Validation
 async function validateDemand({ productIdea, platform }) {
-  const settings = await getSettings();
-
-  if (!settings.openaiApiKey) {
-    throw new Error('Please configure your OpenAI API key in settings');
-  }
-
-  // Extract main keywords
   const keywords = extractKeywords(productIdea);
 
-  // Get keyword data (search volume, trends)
+  // Get keyword data from backend
   let searchData = {};
   try {
-    if (settings.keywordsEverywhereApiKey) {
-      searchData = await getKeywordData(keywords, settings.keywordsEverywhereApiKey);
-    }
+    searchData = await BackendAPI.getKeywordData(keywords);
   } catch (error) {
     console.warn('Failed to fetch keyword data:', error);
   }
@@ -159,9 +141,8 @@ async function validateDemand({ productIdea, platform }) {
   // Build analysis prompt
   const prompt = buildDemandAnalysisPrompt(productIdea, keywords, searchData, platform);
 
-  // Call OpenAI for analysis
-  const analysis = await callOpenAI(prompt, {
-    apiKey: settings.openaiApiKey,
+  // Call OpenAI via backend
+  const analysis = await BackendAPI.callOpenAI(prompt, {
     model: 'gpt-4o-mini',
     temperature: 0.7,
     responseFormat: 'json'
@@ -169,7 +150,6 @@ async function validateDemand({ productIdea, platform }) {
 
   const result = JSON.parse(analysis);
 
-  // Merge with search data
   return {
     data: {
       ...result,
@@ -210,7 +190,6 @@ Be realistic and base scores on actual market knowledge. A score of 7+ means str
 }
 
 function estimateSearchVolume(demandScore) {
-  // Rough estimate when no API data available
   const baseVolumes = {
     1: 100, 2: 500, 3: 1000, 4: 3000, 5: 8000,
     6: 15000, 7: 30000, 8: 50000, 9: 80000, 10: 100000
@@ -220,16 +199,9 @@ function estimateSearchVolume(demandScore) {
 
 // Listing Generation
 async function generateListing({ productDescription, keywords, tone, platform }) {
-  const settings = await getSettings();
-
-  if (!settings.openaiApiKey) {
-    throw new Error('Please configure your OpenAI API key in settings');
-  }
-
   // Generate title
   const titlePrompt = buildTitlePrompt(productDescription, keywords, platform);
-  const title = await callOpenAI(titlePrompt, {
-    apiKey: settings.openaiApiKey,
+  const title = await BackendAPI.callOpenAI(titlePrompt, {
     model: 'gpt-4o-mini',
     temperature: 0.7,
     maxTokens: 200
@@ -237,8 +209,7 @@ async function generateListing({ productDescription, keywords, tone, platform })
 
   // Generate description
   const descPrompt = buildDescriptionPrompt(productDescription, keywords, tone, platform);
-  const description = await callOpenAI(descPrompt, {
-    apiKey: settings.openaiApiKey,
+  const description = await BackendAPI.callOpenAI(descPrompt, {
     model: 'gpt-4o-mini',
     temperature: 0.7,
     maxTokens: 1500
@@ -248,8 +219,7 @@ async function generateListing({ productDescription, keywords, tone, platform })
   let tags = [];
   if (platform === 'etsy') {
     const tagsPrompt = buildTagsPrompt(productDescription, keywords);
-    const tagsResponse = await callOpenAI(tagsPrompt, {
-      apiKey: settings.openaiApiKey,
+    const tagsResponse = await BackendAPI.callOpenAI(tagsPrompt, {
       model: 'gpt-4o-mini',
       temperature: 0.7,
       responseFormat: 'json'
@@ -257,8 +227,7 @@ async function generateListing({ productDescription, keywords, tone, platform })
     tags = JSON.parse(tagsResponse).tags || [];
   } else if (platform === 'amazon') {
     const bulletsPrompt = buildBulletsPrompt(productDescription, keywords);
-    const bulletsResponse = await callOpenAI(bulletsPrompt, {
-      apiKey: settings.openaiApiKey,
+    const bulletsResponse = await BackendAPI.callOpenAI(bulletsPrompt, {
       model: 'gpt-4o-mini',
       temperature: 0.7,
       responseFormat: 'json'
@@ -381,7 +350,6 @@ Return as JSON: { "bullets": ["bullet1", "bullet2", ...] }`;
 
 // Keyword Fetching
 async function fetchKeywords({ query, platform }) {
-  const settings = await getSettings();
   const cacheKey = `keywords_${query}_${platform}`;
 
   // Check cache first
@@ -391,19 +359,18 @@ async function fetchKeywords({ query, platform }) {
   }
 
   const keywords = extractKeywords(query);
-  let keywordData = [];
 
+  // Get keyword data from backend
+  let keywordData = [];
   try {
-    if (settings.keywordsEverywhereApiKey) {
-      const data = await getKeywordData(keywords, settings.keywordsEverywhereApiKey);
-      keywordData = data.keywords || [];
-    }
+    const data = await BackendAPI.getKeywordData(keywords);
+    keywordData = data.keywords || [];
   } catch (error) {
     console.warn('Failed to fetch keyword data:', error);
   }
 
   // If no API data, generate suggestions with AI
-  if (keywordData.length === 0 && settings.openaiApiKey) {
+  if (keywordData.length === 0) {
     const prompt = `Generate 10 high-potential keywords for this product on ${platform}:
 "${query}"
 
@@ -417,8 +384,7 @@ Return as JSON array with this format:
 
 Base estimates on real market knowledge for ${platform}.`;
 
-    const response = await callOpenAI(prompt, {
-      apiKey: settings.openaiApiKey,
+    const response = await BackendAPI.callOpenAI(prompt, {
       model: 'gpt-4o-mini',
       temperature: 0.7,
       responseFormat: 'json'
@@ -428,19 +394,13 @@ Base estimates on real market knowledge for ${platform}.`;
   }
 
   // Cache results
-  await saveToCache(cacheKey, keywordData, 24 * 60 * 60 * 1000); // 24 hours
+  await saveToCache(cacheKey, keywordData, 24 * 60 * 60 * 1000);
 
   return { data: keywordData };
 }
 
 // Product Image Analysis
 async function analyzeProductImage({ imageUrl }) {
-  const settings = await getSettings();
-
-  if (!settings.openaiApiKey) {
-    throw new Error('Please configure your OpenAI API key in settings');
-  }
-
   const prompt = `Analyze this product image and extract:
 1. Product type/category
 2. Key features visible
@@ -458,7 +418,7 @@ Return as JSON:
   "suggestedKeywords": ["..."]
 }`;
 
-  const analysis = await analyzeImage(imageUrl, prompt, settings.openaiApiKey);
+  const analysis = await BackendAPI.analyzeImage(imageUrl, prompt);
   return { data: JSON.parse(analysis) };
 }
 
@@ -468,124 +428,101 @@ chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: false });
 // Extension Install Handler
 chrome.runtime.onInstalled.addListener(async (details) => {
   if (details.reason === 'install') {
-    // Initialize default settings
+    // Initialize default settings (no API keys needed in backend mode)
     await chrome.storage.local.set({
       settings: {
-        openaiApiKey: '',
-        keywordsEverywhereApiKey: '',
+        useBackend: true, // Use backend by default
         defaultPlatform: 'etsy',
         defaultTone: 'professional',
         autoAnalyze: true
-      },
-      usage: {
-        creditsUsed: 0,
-        creditsLimit: 50,
-        resetDate: getNextResetDate(),
-        history: []
       }
     });
+
+    // Initialize backend connection
+    try {
+      await BackendAPI.initBackend();
+    } catch (error) {
+      console.error('Failed to initialize backend:', error);
+    }
 
     // Open options page for setup
     chrome.runtime.openOptionsPage();
   }
 });
 
-function getNextResetDate() {
-  const now = new Date();
-  const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-  return nextMonth.toISOString().split('T')[0];
-}
-
-// Image Processing Handlers
+// Image Processing Handlers (via backend)
 async function handleProcessImage({ imageUrl, operation, options = {} }) {
-  const settings = await getSettings();
-
-  if (!settings.falApiKey) {
-    throw new Error('Please configure your fal.ai API key in settings');
-  }
-
-  // Check credits
-  const hasCredits = await hasImageCredits();
-  if (!hasCredits) {
-    throw new Error('No image credits remaining. Credits reset at the beginning of each month.');
-  }
-
   let result;
 
   switch (operation) {
     case 'white_background':
-      result = await createWhiteBackground(imageUrl, settings.falApiKey, options);
+      result = await BackendAPI.createWhiteBackground(imageUrl, options);
       break;
 
     case 'remove_background':
-      result = await removeBackground(imageUrl, settings.falApiKey);
+      result = await BackendAPI.removeBackground(imageUrl, options);
       break;
 
     case 'lifestyle':
-      result = await generateLifestyleImage(imageUrl, options.prompt, settings.falApiKey, options);
+      result = await BackendAPI.generateLifestyleImage(imageUrl, options.prompt, options);
       break;
 
     case 'upscale':
-      result = await upscaleImage(imageUrl, settings.falApiKey, options);
+      result = await BackendAPI.upscaleImage(imageUrl, options);
       break;
 
     case 'variations':
-      result = await generateVariations(imageUrl, settings.falApiKey, options);
-      break;
-
-    case 'full_process':
-      result = await processImage(imageUrl, settings.falApiKey, options);
+      result = await BackendAPI.generateVariations(imageUrl, options);
       break;
 
     default:
       throw new Error(`Unknown image operation: ${operation}`);
   }
 
-  // Use a credit
-  await useImageCredit(operation);
-
   return { data: result };
 }
 
 async function openImageStudio({ tabId }) {
-  // Open the image studio page
   const studioUrl = chrome.runtime.getURL('image-studio/image-studio.html');
 
   if (tabId) {
-    // Store the source tab ID for later image capture
     await chrome.storage.session.set({ imageStudioSourceTab: tabId });
   }
 
-  // Open in a new tab
   await chrome.tabs.create({ url: studioUrl });
 
   return { success: true };
 }
 
 async function getImageCreditsInfo() {
-  const data = await chrome.storage.local.get('imageCredits');
-  const credits = data.imageCredits || {
-    used: 0,
-    limit: 20,
-    resetDate: getNextResetDate(),
-    history: []
-  };
-
-  // Check if we need to reset
-  const today = new Date().toISOString().split('T')[0];
-  if (credits.resetDate && today >= credits.resetDate) {
-    credits.used = 0;
-    credits.history = [];
-    credits.resetDate = getNextResetDate();
-    await chrome.storage.local.set({ imageCredits: credits });
+  // Get credits from backend
+  try {
+    const usage = await BackendAPI.getUsage();
+    return {
+      data: {
+        used: usage.data?.usage?.imageCredits?.used || 0,
+        limit: usage.data?.usage?.imageCredits?.limit || 5,
+        remaining: (usage.data?.usage?.imageCredits?.limit || 5) -
+                   (usage.data?.usage?.imageCredits?.used || 0)
+      }
+    };
+  } catch (error) {
+    // Fallback to local tracking
+    const data = await chrome.storage.local.get('imageCredits');
+    const credits = data.imageCredits || { used: 0, limit: 5 };
+    return {
+      data: {
+        used: credits.used,
+        limit: credits.limit,
+        remaining: credits.limit - credits.used
+      }
+    };
   }
-
-  return {
-    data: {
-      used: credits.used,
-      limit: credits.limit,
-      remaining: credits.limit - credits.used,
-      resetDate: credits.resetDate
-    }
-  };
 }
+
+// Initialize backend on startup
+BackendAPI.initBackend().catch(err => {
+  console.warn('Backend initialization failed, will retry on first request:', err);
+});
+
+console.log('ListingGenius: Backend mode service worker loaded');

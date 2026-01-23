@@ -6,31 +6,77 @@
 window.ListingGenius = window.ListingGenius || {};
 
 /**
+ * Validate message sender is from extension
+ * @param {Object} sender - Chrome runtime sender
+ * @returns {boolean} - Whether sender is trusted
+ */
+function isValidExtensionSender(sender) {
+  // Only accept messages from our extension
+  return sender.id === chrome.runtime.id;
+}
+
+/**
+ * Create element with safe text content (no innerHTML)
+ * @param {string} tag - HTML tag name
+ * @param {Object} attrs - Attributes to set
+ * @param {string} text - Text content
+ * @returns {HTMLElement}
+ */
+function createElement(tag, attrs = {}, text = '') {
+  const el = document.createElement(tag);
+  Object.entries(attrs).forEach(([key, value]) => {
+    if (key === 'className') {
+      el.className = value;
+    } else if (key.startsWith('data-')) {
+      el.dataset[key.replace('data-', '')] = value;
+    } else {
+      el.setAttribute(key, value);
+    }
+  });
+  if (text) {
+    el.textContent = text;
+  }
+  return el;
+}
+
+/**
  * Inject floating action button into page
  */
 ListingGenius.injectFloatingButton = function() {
   // Check if already injected
   if (document.getElementById('lg-floating-btn')) return;
 
-  const button = document.createElement('div');
-  button.id = 'lg-floating-btn';
-  button.innerHTML = `
-    <div class="lg-fab-main">
-      <span class="lg-fab-icon">&#128640;</span>
-    </div>
-    <div class="lg-fab-menu lg-hidden">
-      <button class="lg-fab-item" data-action="generate" title="Generate Listing">
-        <span>&#10024;</span>
-      </button>
-      <button class="lg-fab-item" data-action="keywords" title="Get Keywords">
-        <span>&#128273;</span>
-      </button>
-      <button class="lg-fab-item" data-action="analyze" title="Analyze Page">
-        <span>&#128202;</span>
-      </button>
-    </div>
-  `;
+  const button = createElement('div', { id: 'lg-floating-btn' });
 
+  // Create main button (using safe DOM methods instead of innerHTML)
+  const mainBtn = createElement('div', { className: 'lg-fab-main' });
+  const mainIcon = createElement('span', { className: 'lg-fab-icon' });
+  mainIcon.innerHTML = '&#128640;'; // Rocket emoji - static, safe
+  mainBtn.appendChild(mainIcon);
+
+  // Create menu
+  const menu = createElement('div', { className: 'lg-fab-menu lg-hidden' });
+
+  const menuItems = [
+    { action: 'generate', title: 'Generate Listing', icon: '&#10024;' },
+    { action: 'keywords', title: 'Get Keywords', icon: '&#128273;' },
+    { action: 'analyze', title: 'Analyze Page', icon: '&#128202;' }
+  ];
+
+  menuItems.forEach(item => {
+    const btn = createElement('button', {
+      className: 'lg-fab-item',
+      'data-action': item.action,
+      title: item.title
+    });
+    const span = document.createElement('span');
+    span.innerHTML = item.icon; // Static emoji codes, safe
+    btn.appendChild(span);
+    menu.appendChild(btn);
+  });
+
+  button.appendChild(mainBtn);
+  button.appendChild(menu);
   document.body.appendChild(button);
 
   // Toggle menu
@@ -326,11 +372,24 @@ function isValidProductImage(img) {
  * Message listener for content script
  */
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  // Security: Only accept messages from our extension
+  if (!isValidExtensionSender(sender)) {
+    sendResponse({ error: 'Unauthorized sender' });
+    return false;
+  }
+
   const { action, data } = message;
 
   switch (action) {
     case 'autoFill':
-      ListingGenius.autoFillForm(data)
+      // Show confirmation before auto-filling
+      ListingGenius.confirmAutoFill(data)
+        .then(confirmed => {
+          if (confirmed) {
+            return ListingGenius.autoFillForm(data);
+          }
+          throw new Error('Auto-fill cancelled by user');
+        })
         .then(() => sendResponse({ success: true }))
         .catch(error => sendResponse({ error: error.message }));
       return true;
@@ -372,6 +431,76 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
  */
 ListingGenius.useGeneratedImages = async function(images) {
   ListingGenius.showToast('Images ready! You can download and upload them manually.', 'info');
+};
+
+/**
+ * Show confirmation dialog before auto-fill
+ * @param {Object} data - Data to be filled
+ * @returns {Promise<boolean>} - User confirmation
+ */
+ListingGenius.confirmAutoFill = async function(data) {
+  return new Promise((resolve) => {
+    // Create confirmation overlay
+    const overlay = createElement('div', { id: 'lg-confirm-overlay', className: 'lg-confirm-overlay' });
+
+    const dialog = createElement('div', { className: 'lg-confirm-dialog' });
+
+    const title = createElement('h3', {}, 'Confirm Auto-Fill');
+    const message = createElement('p', {}, 'ListingGenius will fill in the following fields:');
+
+    const preview = createElement('ul', { className: 'lg-confirm-preview' });
+    if (data.title) {
+      const li = createElement('li');
+      li.appendChild(createElement('strong', {}, 'Title: '));
+      li.appendChild(document.createTextNode(data.title.substring(0, 50) + (data.title.length > 50 ? '...' : '')));
+      preview.appendChild(li);
+    }
+    if (data.description) {
+      const li = createElement('li');
+      li.appendChild(createElement('strong', {}, 'Description: '));
+      li.appendChild(document.createTextNode(data.description.substring(0, 50) + '...'));
+      preview.appendChild(li);
+    }
+    if (data.tags?.length) {
+      const li = createElement('li');
+      li.appendChild(createElement('strong', {}, 'Tags: '));
+      li.appendChild(document.createTextNode(data.tags.slice(0, 3).join(', ') + (data.tags.length > 3 ? '...' : '')));
+      preview.appendChild(li);
+    }
+
+    const buttonContainer = createElement('div', { className: 'lg-confirm-buttons' });
+
+    const cancelBtn = createElement('button', { className: 'lg-confirm-cancel' }, 'Cancel');
+    cancelBtn.addEventListener('click', () => {
+      overlay.remove();
+      resolve(false);
+    });
+
+    const confirmBtn = createElement('button', { className: 'lg-confirm-ok' }, 'Fill Fields');
+    confirmBtn.addEventListener('click', () => {
+      overlay.remove();
+      resolve(true);
+    });
+
+    buttonContainer.appendChild(cancelBtn);
+    buttonContainer.appendChild(confirmBtn);
+
+    dialog.appendChild(title);
+    dialog.appendChild(message);
+    dialog.appendChild(preview);
+    dialog.appendChild(buttonContainer);
+    overlay.appendChild(dialog);
+
+    document.body.appendChild(overlay);
+
+    // Auto-dismiss after 30 seconds
+    setTimeout(() => {
+      if (document.getElementById('lg-confirm-overlay')) {
+        overlay.remove();
+        resolve(false);
+      }
+    }, 30000);
+  });
 };
 
 /**
